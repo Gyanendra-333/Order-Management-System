@@ -77,8 +77,8 @@ class OrderService {
     }
 
     async updateOrder(id, payload) {
-
         const order = await Order.findById(id);
+
         if (!order) {
             return null;
         }
@@ -87,6 +87,16 @@ class OrderService {
             payload.status &&
             payload.status !== order.status
         ) {
+
+            const {
+                validateStatusTransition
+            } = await import("../utils/orderWorkflow.js");
+
+            validateStatusTransition(
+                order.status,
+                payload.status
+            );
+
             order.statusHistory.push({
                 status: payload.status,
                 changedBy: "ADMIN",
@@ -95,10 +105,8 @@ class OrderService {
         }
 
         Object.assign(order, payload);
-
         await order.save();
         return order;
-
     }
 
     async deleteOrder(id) {
