@@ -1,21 +1,50 @@
+import mongoose from "mongoose";
 import Order from "../models/Order.js";
 import generateOrderId from "../utils/generateOrderId.js";
+import { validateStatusTransition } from "../utils/orderWorkflow.js";
+import { createAudit } from "./orderAudit.service.js";
 
 class OrderService {
 
     async createOrder(data) {
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        const order = await Order.create({
-            orderId: generateOrderId(),
-            customerName: data.customerName,
-            phoneNumber: data.phoneNumber,
-            productName: data.productName,
-            amount: data.amount,
-            paymentStatus: data.paymentStatus || "PENDING"
+        try {
 
-        });
+            const order = await Order.create(
+                [{
+                    orderId: generateOrderId(),
+                    customerName: data.customerName,
+                    phoneNumber: data.phoneNumber,
+                    productName: data.productName,
+                    amount: data.amount,
+                    paymentStatus: data.paymentStatus || "PENDING"
+                }],
+                { session }
+            );
 
-        return order;
+            await createAudit({
+
+                order: order[0]._id,
+                action: "ORDER_CREATED",
+                currentStatus: order[0].status,
+                performedBy: "SYSTEM"
+
+            });
+
+            await session.commitTransaction();
+            return order[0];
+
+        } catch (error) {
+
+            await session.abortTransaction();
+            throw error;
+        } finally {
+
+            session.endSession();
+
+        }
 
     }
 
@@ -40,77 +69,141 @@ class OrderService {
         if (search) {
 
             filter.$or = [
+
                 {
                     orderId: {
                         $regex: search,
                         $options: "i"
                     }
                 },
+
                 {
                     customerName: {
                         $regex: search,
                         $options: "i"
                     }
                 }
+
             ];
+
         }
+
         const total = await Order.countDocuments(filter);
         const orders = await Order.find(filter)
 
             .sort(sort)
-            .skip((page - 1) * limit)
+            .skip((page - 1) * Number(limit))
             .limit(Number(limit));
 
         return {
 
             total,
             currentPage: Number(page),
-            totalPages: Math.ceil(total / limit),
+            totalPages: Math.ceil(total / Number(limit)),
             orders
+
         };
 
     }
 
     async getOrderById(id) {
+
         return await Order.findById(id);
 
     }
 
     async updateOrder(id, payload) {
-        const order = await Order.findById(id);
 
-        if (!order) {
-            return null;
-        }
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-        if (
-            payload.status &&
-            payload.status !== order.status
-        ) {
+        try {
 
-            const {
-                validateStatusTransition
-            } = await import("../utils/orderWorkflow.js");
+            const order = await Order.findById(id).session(session);
 
-            validateStatusTransition(
-                order.status,
-                payload.status
-            );
+            if (!order) {
+                await session.abortTransaction();
+                return null;
 
-            order.statusHistory.push({
-                status: payload.status,
-                changedBy: "ADMIN",
-                changedAt: new Date()
+            }
+
+            const previousStatus = order.status;
+
+            if (
+                payload.status &&
+                payload.status !== order.status
+            ) {
+                validateStatusTransition(
+                    order.status,
+                    payload.status
+                );
+                order.statusHistory.push({
+                    status: payload.status,
+                    changedBy: "ADMIN",
+                    changedAt: new Date()
+                });
+            }
+
+            Object.assign(order, payload);
+            await order.save({
+                session
             });
-        }
+            if (
+                previousStatus !== order.status
+            ) {
 
-        Object.assign(order, payload);
-        await order.save();
-        return order;
+                await createAudit({
+                    order: order._id,
+                    action: "STATUS_UPDATED",
+                    previousStatus,
+                    currentStatus: order.status,
+                    performedBy: "ADMIN"
+                });
+            }
+
+            await session.commitTransaction();
+            return order;
+
+        } catch (error) {
+            await session.abortTransaction();
+            throw error;
+        } finally {
+            session.endSession();
+        }
     }
 
     async deleteOrder(id) {
-        return await Order.findByIdAndDelete(id);
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            const order = await Order.findById(id).session(session);
+            if (!order) {
+                await session.abortTransaction();
+                return null;
+            }
+            await createAudit({
+                order: order._id,
+                action: "ORDER_DELETED",
+                previousStatus: order.status,
+                currentStatus: null,
+                performedBy: "ADMIN"
+            });
+
+            await Order.deleteOne({
+                _id: id
+            }).session(session);
+            await session.commitTransaction();
+            return order;
+        } catch (error) {
+
+            await session.abortTransaction();
+            throw error;
+
+        } finally {
+            session.endSession();
+        }
     }
 }
+
 export default new OrderService();

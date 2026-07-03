@@ -8,6 +8,7 @@ import notFound from "./middlewares/notFound.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import orderRoutes from "./routes/order.routes.js";
 import orderStatusRoutes from "./routes/orderStatus.routes.js";
+import orderAuditRoutes from "./routes/orderAudit.routes.js";
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/orders", orderRoutes);
 app.use("/api/orders", orderStatusRoutes);
+app.use("/api/orders", orderAuditRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
