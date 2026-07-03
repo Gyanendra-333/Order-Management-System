@@ -4,6 +4,8 @@ import helmet from "helmet";
 import compression from "compression";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import notFound from "./middlewares/notFound.js";
+import errorHandler from "./middlewares/errorHandler.js";
 
 const app = express();
 
@@ -45,5 +47,8 @@ app.get("/", (req, res) => {
     });
 
 });
+
+app.use(notFound);
+app.use(errorHandler);
 
 export default app;
