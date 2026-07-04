@@ -1,29 +1,45 @@
-import {
-    createContext,
-    useContext,
-    useState,
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-const ThemeContext =
-    createContext();
+const ThemeContext = createContext(null);
 
-export const ThemeProvider = ({
-    children,
-}) => {
-    const [dark, setDark] =
-        useState(false);
+const STORAGE_KEY = "order-control-theme";
 
-    return (
-        <ThemeContext.Provider
-            value={{
-                dark,
-                setDark,
-            }}
-        >
-            {children}
-        </ThemeContext.Provider>
-    );
-};
+function getInitialTheme() {
+  if (typeof window === "undefined") return "dark";
+  const saved = window.localStorage.getItem(STORAGE_KEY);
+  if (saved === "dark" || saved === "light") return saved;
+  const prefersLight = window.matchMedia?.(
+    "(prefers-color-scheme: light)"
+  ).matches;
+  return prefersLight ? "light" : "dark";
+}
 
-export const useTheme = () =>
-    useContext(ThemeContext);
+export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem(STORAGE_KEY, theme);
+  }, [theme]);
+
+  const value = useMemo(
+    () => ({
+      theme,
+      isDark: theme === "dark",
+      toggleTheme: () =>
+        setTheme((prev) => (prev === "dark" ? "light" : "dark")),
+      setTheme
+    }),
+    [theme]
+  );
+
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
+}
+
+export function useTheme() {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
+  return ctx;
+}

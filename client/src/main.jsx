@@ -1,25 +1,16 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
-
-import App from "./App";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import "./index.css";
+import App from "./App.jsx";
+import { ThemeProvider } from "./context/ThemeContext.jsx";
+import { OrderProvider } from "./context/OrderContext.jsx";
 
-import { OrderProvider } from "./context/OrderContext";
-import { ThemeProvider } from "./context/ThemeContext";
-
-ReactDOM.createRoot(
-  document.getElementById("root")
-).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <ThemeProvider>
-        <OrderProvider>
-          <Toaster position="top-right" />
-          <App />
-        </OrderProvider>
-      </ThemeProvider>
-    </BrowserRouter>
-  </React.StrictMode>
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <ThemeProvider>
+      <OrderProvider>
+        <App />
+      </OrderProvider>
+    </ThemeProvider>
+  </StrictMode>
 );
