@@ -10,7 +10,6 @@ const axiosClient = axios.create({
   }
 });
 
-// Normalize errors into a single shape the UI can rely on.
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
