@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -10,6 +12,7 @@ import orderRoutes from "./routes/order.routes.js";
 import orderStatusRoutes from "./routes/orderStatus.routes.js";
 import orderAuditRoutes from "./routes/orderAudit.routes.js";
 import schedulerRoutes from "./routes/scheduler.routes.js";
+
 
 const app = express();
 
