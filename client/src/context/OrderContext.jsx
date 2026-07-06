@@ -76,7 +76,6 @@ export function OrderProvider({ children }) {
       });
       setStatusCounts(counts);
     } catch {
-      // Rail is a nice-to-have overview — fail silently on transient errors.
     }
   }, []);
 

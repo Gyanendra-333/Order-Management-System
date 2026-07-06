@@ -7,8 +7,6 @@ export const ORDER_STATUS = {
   CANCELLED: "CANCELLED"
 };
 
-// Order matters here — it mirrors the real fulfillment pipeline and
-// drives the pipeline-rail visualization.
 export const ORDER_STATUS_FLOW = [
   ORDER_STATUS.PLACED,
   ORDER_STATUS.PROCESSING,
@@ -40,8 +38,5 @@ export const PAYMENT_STATUS_META = {
   REFUNDED: { label: "Refunded", var: "--pay-refunded" }
 };
 
-// The scheduler promotes PLACED -> PROCESSING every tick once an order
-// has been sitting for ORDER_STALE_MINUTES. Purely informational on the
-// frontend (mirrors the backend's cron docs) — used for the countdown hint.
 export const SCHEDULER_INTERVAL_MINUTES = 5;
 export const ORDER_STALE_MINUTES = 10;
